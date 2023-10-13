@@ -3,16 +3,6 @@ from socket import *
 import sys
 import struct 
 
-# Debugging error message
-def check_server_response(response):
-    data_len, pcode, entity = struct.unpack_from('!IHH', response)
-    if pcode == 555:
-        response = response[8:]
-        print(response.decode())
-        sys.exit()
-    return
-
-
 # Printing starting stage A
 print("----------- Starting Stage A -----------")
 #assign server name 
@@ -27,28 +17,29 @@ clientSocket = socket(AF_INET, SOCK_DGRAM)
 clientSocket.connect((serverName, serverPort))
 
 # Make the packet contents 
-data = 'Hello World!!!'
+data = "Hello World!!!"
 data_length = len(data)
 pcode = 0
 entity = clientPort
-
-# Making the packet  
-format_string = '20s'
-packed_data = struct.pack(format_string, data.encode('utf-8'))
-
-packet = struct.pack("iiip",data_length, pcode, entity, packed_data)
-
+format='! i h h 16s'
+# Making the packet , string must be in bytes so encoded
+packet = struct.pack(format,data_length, pcode, entity,data.encode())
+#print(packed_data.decode('utf-8'))
 # Ensuring length of packet % 4 == 0
-if(len(packet)) % 4 != 0:  # !!! note, change to calcsize later 
-    print("Error: Packet length is not divisble by 0")
-    clientSocket.close()
+if(len(packet)) % 4 != 0: #can also do struct.calcsize(format)
+    print(f"The len of the packet is:  {len(packet)} ")
+    print("Error: Packet length is not divisble by 4")
+    #clientSocket.close()
 
 # Sending packet to server 
-clientSocket.sendto(packet.encode(), (serverName, serverPort))
+clientSocket.sendto(packet, (serverName, serverPort))
 
 # Getting packet from server 
-data_length, pcode, entity, repeat, udp_port, length, codeA =  clientSocket.recvfrom(12000)
+new_packet, serverAddress = clientSocket.recvfrom(2024)
+format="! i i i i i h h"
+data_length, pcode, entity, repeat, udp_port, length, codeA =  struct.unpack(format, new_packet)
 # Printing contents of packets 
+
 print(f"Received packet from the server: data_len: {data_length} pcode: {pcode} entity: {entity} repeat:{repeat} len: {length} udp_port: {udp_port} codeA: {codeA} ")
 print("----------- End Stage A -----------")
 clientSocket.close()
