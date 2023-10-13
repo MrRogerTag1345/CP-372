@@ -5,7 +5,7 @@ import random  # for random integer
 import struct
 
 # Define the expected packet format
-format = '!IHH'
+format = '! i h h 16s'
 
 # Convert an integer to a "short"
 def int_to_short(x):
@@ -26,13 +26,14 @@ serverPort = 12000
 serverSocket = socket(AF_INET, SOCK_DGRAM)
 
 # Bind the socket to server address and server port
-serverSocket.bind(("", serverPort))
+serverSocket.bind(("localhost", serverPort))
 
 while True:
     packet, clientAddress = serverSocket.recvfrom(1024)
 
     # Verifies packet
     data_length, pcode, entity, data = struct.unpack(format, packet)
+    data=data.decode().rstrip("\x00") #removes any trailing null characters 
     if (data_length != len(packet)) or (data != "Hello World!!!") or (pcode != 0) or (entity != 2):
         print("Verification failed")
 
@@ -41,6 +42,7 @@ while True:
     udp_port = random.randint(20000, 30000)
     length = int_to_short(random.randint(50, 100))
     codeA = int_to_short(random.randint(100, 400))
+    format="! i i i i i h h"
     
     print(data_length)
     print(pcode)
