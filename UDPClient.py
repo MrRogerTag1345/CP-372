@@ -30,7 +30,9 @@ packet = struct.pack(format,data_length, pcode, entity,data.encode())
 if(len(packet)) % 4 != 0: #can also do struct.calcsize(format)
     print(f"The len of the packet is:  {len(packet)} ")
     print("Error: Packet length is not divisble by 4")
-    #clientSocket.close()
+    clientSocket.close()
+    sys.exit()
+    
 
 # Sending packet to server 
 clientSocket.sendto(packet, (serverName, serverPort))
@@ -62,4 +64,15 @@ format='ihhhi'
 packet = struct.pack(format,data_length,pcode,entity,packetId,data)
 # Sending packet to server 
 clientSocket.sendto(packet, (serverName, serverPort))
+recieived=False 
+while recieived==False:
+    socket.settimeout(5)
+    acked_packet, serverAddress = clientSocket.recvfrom(2024)
+    p_code,entity,acked_packet_id=struct.unpack('ihhi', new_packet)
+    #if no packet was received, send packet again 
+    if(acked_packet_id==0):
+        clientSocket.sendto(packet, (serverName, serverPort))
+    else:
+        recieived=True
+        clientSocket.sendto(acked_packet_id, serverAddress)
 clientSocket.close()
