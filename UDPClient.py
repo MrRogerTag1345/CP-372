@@ -2,6 +2,7 @@
 from socket import * 
 import sys
 import struct 
+import random  # for random integer
 
 # Printing starting stage A
 print("----------- Starting Stage A -----------")
@@ -21,7 +22,7 @@ data = "Hello World!!!"
 data_length = len(data)
 pcode = 0
 entity = clientPort
-format='! i h h 16s'
+format='! i h h 14s x x'
 # Making the packet , string must be in bytes so encoded
 packet = struct.pack(format,data_length, pcode, entity,data.encode())
 #print(packed_data.decode('utf-8'))
@@ -42,4 +43,23 @@ data_length, pcode, entity, repeat, udp_port, length, codeA =  struct.unpack(for
 
 print(f"Received packet from the server: data_len: {data_length} pcode: {pcode} entity: {entity} repeat:{repeat} len: {length} udp_port: {udp_port} codeA: {codeA} ")
 print("----------- End Stage A -----------")
+
+print("----------- Starting Stage B -----------")
+# Initlaizing variables 
+pcode=codeA
+entity = clientPort
+packetId=random.randint(0, repeat-1)
+data=''.zfill(length)
+#ensuring len of data is divisible by 4
+while(len(data)%4!=0):
+    #while not divisble, add a 0 to the end 
+    data.bytearray(1)
+#convert to int from string 
+data=int(data)
+datalength=len(data)+len(packetId)
+format='ihhhi'
+# Making packet 
+packet = struct.pack(format,data_length,pcode,entity,packetId,data)
+# Sending packet to server 
+clientSocket.sendto(packet, (serverName, serverPort))
 clientSocket.close()
