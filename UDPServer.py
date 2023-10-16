@@ -1,4 +1,4 @@
-# Import socket module
+ # Import socket module
 from socket import *
 import sys  # In order to terminate the program
 import random  # for random integer
@@ -20,6 +20,34 @@ def check_server_response(response):
         response = response[8:]
         print("Received response from the server:", response.decode())
         sys.exit()
+        
+def packetA():
+    packet, clientAddress = serverSocket.recvfrom(1024)
+    # Verifies packet
+    data_length, pcode, entity, data = struct.unpack(format, packet)
+    data=data.decode().rstrip("\x00") #removes any trailing null characters 
+    if (data_length != len(packet)) or (data != "Hello World!!!") or (pcode != 0) or (entity != 2):
+        print("Verification failed")
+    else:
+        new_packet=makePacketA(pcode,entity)
+        serverSocket.sendto(new_packet, clientAddress)
+        #change phase to B 
+        #phase='B'
+def makePacketA(pcode,entity):
+    # Making values in the packet
+    repeat = random.randint(5, 20)
+    udp_port = random.randint(20000, 30000)
+    length = int_to_short(random.randint(50, 100))
+    codeA = int_to_short(random.randint(100, 400))
+    format="!IIHH"
+    #make data part of packet
+    data=struct.pack(format,repeat,udp_port,length,codeA)
+    #make header part of packet 
+    data_length=struct.calcsize(format)
+    header=struct.pack('!IHH',data_length,pcode,entity)
+    # Making the packet
+    packet=header+data
+    return packet,udp_port,repeat
 
 # Assign a port number
 serverPort = 12000
@@ -34,33 +62,7 @@ cont=True
 while cont:
     match phase:
         case 'A':
-            packet, clientAddress = serverSocket.recvfrom(1024)
 
-            # Verifies packet
-            data_length, pcode, entity, data = struct.unpack(format, packet)
-            data=data.decode().rstrip("\x00") #removes any trailing null characters 
-            if (data_length != len(packet)) or (data != "Hello World!!!") or (pcode != 0) or (entity != 2):
-                print("Verification failed")
-                break
-
-            # Making values in the packet
-            repeat = random.randint(5, 20)
-            udp_port = random.randint(20000, 30000)
-            length = int_to_short(random.randint(50, 100))
-            codeA = int_to_short(random.randint(100, 400))
-            format="! i i i i i h h"
-            
-            print(data_length)
-            print(pcode)
-            print(entity)
-            print(data)
-
-            # Making the packet
-            new_packet = struct.pack(format, data_length, pcode, entity, repeat, udp_port, length, codeA)
-
-            serverSocket.sendto(new_packet, clientAddress)
-            #change phase to B 
-            phase='B'
         case 'B':
             format='ihhhi'
             packet, clientAddress = serverSocket.recvfrom(1024)
