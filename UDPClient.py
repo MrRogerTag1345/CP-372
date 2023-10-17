@@ -9,49 +9,64 @@ def getHeaderData(packet):
     header=packet[:8]
     data=packet[8:]
     return header,data 
-# Printing starting stage A
-print("----------- Starting Stage A -----------")
-#assign server name 
 
-# clientName = 'local'  <- unused for now 
-serverName = '34.67.93.93'
+def assignConnection():
+    #assign server name 
+    # clientName = 'local'  <- unused for now 
+    serverName = '34.67.93.93'
+    # Assign a port number
+    clientPort = 2 #same as in class 
+    serverPort = 12000
+    clientSocket = socket(AF_INET, SOCK_DGRAM)
+    clientSocket.connect((serverName, serverPort))
+    return serverName,clientPort,serverPort,clientSocket
 
-# Assign a port number
-clientPort = 2 #same as in class 
-serverPort = 12000
-clientSocket = socket(AF_INET, SOCK_DGRAM)
-clientSocket.connect((serverName, serverPort))
+def makePacketA(clientPort):
+    # Make the packet contents 
+    data = "Hello World!!!"
+    data=bytes(data,'utf-8')
+    data_length = len(data)
+    pcode = 0
+    entity = clientPort
+    header=struct.pack('!IHI',data_length, pcode, entity,)
+    data=struct.pack('!14s',data)
+    # Making the packet , string must be in bytes so encoded
+    packet = header+data
+    return packet
 
-# Make the packet contents 
-data = "Hello World!!!"
-data_length = len(data)
-pcode = 0
-entity = clientPort
-format='! i h h 14s x x'
-# Making the packet , string must be in bytes so encoded
-packet = struct.pack(format,data_length, pcode, entity,data.encode())
-#print(packed_data.decode('utf-8'))
-# Ensuring length of packet % 4 == 0
-if(len(packet)) % 4 != 0: #can also do struct.calcsize(format)
-    print(f"The len of the packet is:  {len(packet)} ")
-    print("Error: Packet length is not divisble by 4")
-    clientSocket.close()
-    sys.exit()
+def validPacketLen(packet):
+    valid=True
+    if(len(packet)) % 4 != 0: #can also do struct.calcsize(format)
+        print(f"The len of the packet is:  {len(packet)} ")
+        print("Error: Packet length is not divisble by 4")
+        valid=False
+    return valid
+
+def stageA():
+    print("----------- Starting Stage A -----------")
+    serverName,clientPort,serverPort,clientSocket=assignConnection()
+    packet=makePacketA()
+    valid=validPacketLen(packet)
+    if valid:
+        # Sending packet to server 
+        clientSocket.sendto(packet, (serverName, serverPort))
+        # Getting packet from server 
+        serverPacket, serverAddress = clientSocket.recvfrom(2024)
+        print("Server send packet")
+        #getting data from header and data section of packet 
+        header,data=getHeaderData(serverPacket)
+        repeat, udp_port, length, codeA =  struct.unpack("!IIHH",data)
+        data_length,pcode,entity =  struct.unpack("!IHH",header)
+        # Printing contents of packets 
+        print(f"Received packet from the server: data_len: {data_length} pcode: {pcode} entity: {entity} repeat:{repeat} len: {length} udp_port: {udp_port} codeA: {codeA} ")
+        print("----------- End Stage A -----------")
+
+def main():
+    stageA()
+
+if __name__ == "__main__":
+    main()
     
-
-# Sending packet to server 
-clientSocket.sendto(packet, (serverName, serverPort))
-
-# Getting packet from server 
-serverPacket, serverAddress = clientSocket.recvfrom(2024)
-print("Server send packet")
-header,data=getHeaderData(serverPacket)
-repeat, udp_port, length, codeA =  struct.unpack("!IIHH",data)
-data_length,pcode,entity =  struct.unpack("!IHH",header)
-# Printing contents of packets 
-print(f"Received packet from the server: data_len: {data_length} pcode: {pcode} entity: {entity} repeat:{repeat} len: {length} udp_port: {udp_port} codeA: {codeA} ")
-print("----------- End Stage A -----------")
-
 # print("----------- Starting Stage B -----------")
 # # Initlaizing variables 
 # pcode=codeA
