@@ -29,6 +29,7 @@ def getHeaderData(packet):
 #     clientSocket.connect((serverName, serverPort))
 #     return serverName,clientPort,serverPort,clientSocket
 
+
 <<<<<<< Updated upstream
 def makePacketA():
     # Make the packet contents 
@@ -50,6 +51,7 @@ new_packet = new_packet[:24]
 data_length, pcode, entity, repeat, udp_port, length, codeA =  struct.unpack(format, new_packet)
 # Printing contents of packets 
 >>>>>>> Stashed changes
+
 
 def validPacketLen(packet):
     valid=True
@@ -76,41 +78,61 @@ def stageA():
         # Printing contents of packets 
         print(f"Received packet from the server: data_len: {data_length} pcode: {pcode} entity: {entity} repeat:{repeat} len: {length} udp_port: {udp_port} codeA: {codeA} ")
         print("----------- End Stage A -----------")
+        return repeat,length,codeA
 
+def makePacketB(repeat,length,codeA):
+    # Initlaizing variables 
+    pcode=codeA
+    entity = clientPort
+    packetId=random.randint(0, repeat-1)
+    data=''.zfill(length)
+    #ensuring len of data is divisible by 4
+    while(len(data)%4!=0):
+        #while not divisble, add a 0 to the end 
+        data.bytearray(1)
+    data=int(data)
+    data_length=len(data)+len(packetId)
+    #make header and data of packet 
+    header=struct.pack('!IHH',data_length,codeA,entity)
+    data=struct.pack('!HI',packetId,data)
+    packet=header+data
+    return packet
+
+def stageB(repeat,length,codeA):
+    # print("----------- Starting Stage B -----------")
+    packet=makePacketB(repeat,length,codeA)
+    clientSocket.sendto(packet, (serverName, serverPort))
+    recieived=False 
+    while recieived==False:
+        socket.settimeout(5)
+        acked_packet, serverAddress = clientSocket.recvfrom(2024)
+        p_code,entity,acked_packet_id=struct.unpack('ihhi', acked_packet)
+        #if no packet was received, send packet again 
+        if(acked_packet_id==0):
+            clientSocket.sendto(packet, serverAddress)
+        else:
+            recieived=True
+            clientSocket.sendto(acked_packet_id, serverAddress)
+    #get packet from server 
+    serverPacket, serverAddress = clientSocket.recvfrom(2024)
+    print("Server send packet")
+    #getting data from header and data section of packet 
+    header,data=getHeaderData(serverPacket)
+    data_length,pcode,entity =  struct.unpack("!IHH",header)
+    tcp_port,codeB =  struct.unpack("!II",data)
+    print(f"Received packet from the server: data_len: {data_length} pcode: {pcode} entity: {entity} tcp_port: {tcp_port} codeB: {codeB} ")
+    print("----------- End Stage B -----------")
+    return tcp_port
+
+def stageC():
+    return
 def main():
-    stageA()
+    repeat,length,codeA=stageA()
+    tcp_port=stageB(repeat,length,codeA)
+    stageC(tcp_port)
     clientSocket.close()
 
 if __name__ == "__main__":
     main()
     
     
-# print("----------- Starting Stage B -----------")
-# # Initlaizing variables 
-# pcode=codeA
-# entity = clientPort
-# packetId=random.randint(0, repeat-1)
-# data=''.zfill(length)
-# #ensuring len of data is divisible by 4
-# while(len(data)%4!=0):
-#     #while not divisble, add a 0 to the end 
-#     data.bytearray(1)
-# #convert to int from string 
-# data=int(data)
-# datalength=len(data)+len(packetId)
-# format='ihhhi'
-# # Making packet 
-# packet = struct.pack(format,data_length,pcode,entity,packetId,data)
-# # Sending packet to server 
-# clientSocket.sendto(packet, (serverName, serverPort))
-# recieived=False 
-# while recieived==False:
-#     socket.settimeout(5)
-#     acked_packet, serverAddress = clientSocket.recvfrom(2024)
-#     p_code,entity,acked_packet_id=struct.unpack('ihhi', new_packet)
-#     #if no packet was received, send packet again 
-#     if(acked_packet_id==0):
-#         clientSocket.sendto(packet, (serverName, serverPort))
-#     else:
-#         recieived=True
-#         clientSocket.sendto(acked_packet_id, serverAddress)
