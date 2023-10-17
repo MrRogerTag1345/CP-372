@@ -3,6 +3,14 @@ from socket import *
 import sys
 import struct 
 import random  # for random integer
+#assign server name 
+# clientName = 'local'  <- unused for now 
+serverName = '34.67.93.93'
+# Assign a port number
+clientPort = 2 #same as in class 
+serverPort = 12000
+clientSocket = socket(AF_INET, SOCK_DGRAM)
+clientSocket.connect((serverName, serverPort))
 
 def getHeaderData(packet):
     #header is first 8 bit, rest is data 
@@ -10,18 +18,18 @@ def getHeaderData(packet):
     data=packet[8:]
     return header,data 
 
-def assignConnection():
-    #assign server name 
-    # clientName = 'local'  <- unused for now 
-    serverName = '34.67.93.93'
-    # Assign a port number
-    clientPort = 2 #same as in class 
-    serverPort = 12000
-    clientSocket = socket(AF_INET, SOCK_DGRAM)
-    clientSocket.connect((serverName, serverPort))
-    return serverName,clientPort,serverPort,clientSocket
+# def assignConnection():
+#     #assign server name 
+#     # clientName = 'local'  <- unused for now 
+#     serverName = '34.67.93.93'
+#     # Assign a port number
+#     clientPort = 2 #same as in class 
+#     serverPort = 12000
+#     clientSocket = socket(AF_INET, SOCK_DGRAM)
+#     clientSocket.connect((serverName, serverPort))
+#     return serverName,clientPort,serverPort,clientSocket
 
-def makePacketA(clientPort):
+def makePacketA():
     # Make the packet contents 
     data = "Hello World!!!"
     data=bytes(data,'utf-8')
@@ -44,7 +52,6 @@ def validPacketLen(packet):
 
 def stageA():
     print("----------- Starting Stage A -----------")
-    serverName,clientPort,serverPort,clientSocket=assignConnection()
     packet=makePacketA()
     valid=validPacketLen(packet)
     if valid:
@@ -63,9 +70,11 @@ def stageA():
 
 def main():
     stageA()
+    clientSocket.close()
 
 if __name__ == "__main__":
     main()
+    
     
 # print("----------- Starting Stage B -----------")
 # # Initlaizing variables 
@@ -96,4 +105,3 @@ if __name__ == "__main__":
 #     else:
 #         recieived=True
 #         clientSocket.sendto(acked_packet_id, serverAddress)
-clientSocket.close()
