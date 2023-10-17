@@ -87,9 +87,11 @@ def makePacketB(repeat,length,codeA):
     packetId=random.randint(0, repeat-1)
     data=''.zfill(length)
     #ensuring len of data is divisible by 4
-    while(len(data)%4!=0):
+    dataBitNeeded=len(data)%4
+    
+    if(dataBitNeeded!=0):
         #while not divisble, add a 0 to the end 
-        data.bytearray(1)
+        data +=bytearray[0]*dataBitNeeded
     data=int(data)
     data_length=len(data)+len(packetId)
     #make header and data of packet 
@@ -97,6 +99,7 @@ def makePacketB(repeat,length,codeA):
     data=struct.pack('!HI',packetId,data)
     packet=header+data
     return packet
+
 
 def stageB(repeat,length,codeA):
     # print("----------- Starting Stage B -----------")
