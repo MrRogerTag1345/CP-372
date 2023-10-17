@@ -30,7 +30,6 @@ def getHeaderData(packet):
 #     return serverName,clientPort,serverPort,clientSocket
 
 
-<<<<<<< Updated upstream
 def makePacketA():
     # Make the packet contents 
     data = "Hello World!!!"
@@ -43,14 +42,13 @@ def makePacketA():
     # Making the packet , string must be in bytes so encoded
     packet = header+data
     return packet
-=======
+
 # Getting packet from server 
 new_packet, serverAddress = clientSocket.recvfrom(2024)
 format="! i i i i i h h"
 new_packet = new_packet[:24]
 data_length, pcode, entity, repeat, udp_port, length, codeA =  struct.unpack(format, new_packet)
 # Printing contents of packets 
->>>>>>> Stashed changes
 
 
 def validPacketLen(packet):
