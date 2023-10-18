@@ -2,6 +2,7 @@
 from socket import * 
 import sys
 import struct 
+import time 
 import random  # for random integer
 #assign server name 
 HEADER_LENGTH=8
@@ -110,12 +111,15 @@ def makePacketB(repeat,length,codeA):
     pcode=codeA
     entity = ENTITY_CLIENT
     packetId=repeat
+    #turn into big endian 
+    packetId=packetId.to_bytes(4,'big')
     data=''.zfill(length)
     #ensuring len of data is divisible by 4
     data,data_length=increaseDataByte(data)
+    data_length=data_length+4 #4 is from packet ID 
     #make header and data of packet 
     header=struct.pack('!IHH',data_length,codeA,entity)
-    data=struct.pack('!H',packetId)+data
+    data=struct.pack(f'!{data_length}s',packetId+data)
     packet=header+data
     return packet
 
@@ -128,7 +132,7 @@ def stageB(repeat,length,codeA):
     #sends repeat amount of packages 
     while(repeat>len_successfulPackets):
         try:
-            packet=makePacketB(repeat,length,codeA)
+            packet=makePacketB(len_successfulPackets,length,codeA)
             clientSocket.sendto(packet, (serverName, serverPort))
             acked_packet, serverAddress = clientSocket.recvfrom(2024)
             print(f"{len_successfulPackets} packets has been acknowledged")
