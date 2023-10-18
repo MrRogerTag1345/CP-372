@@ -108,14 +108,14 @@ def makePacketA():
 def makePacketB(repeat,length,codeA):
     # Initlaizing variables 
     pcode=codeA
-    entity = clientPort
-    packetId=random.randint(0, repeat-1)
+    entity = ENTITY_CLIENT
+    packetId=repeat
     data=''.zfill(length)
     #ensuring len of data is divisible by 4
     data,data_length=increaseDataByte(data)
     #make header and data of packet 
     header=struct.pack('!IHH',data_length,codeA,entity)
-    data=struct.pack('!HI',packetId,data)
+    data=struct.pack('!H',packetId)+data
     packet=header+data
     return packet
 
