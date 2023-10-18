@@ -7,6 +7,7 @@ import struct
 # Assign a port number
 serverPort = 12000
 serverSocket = socket(AF_INET, SOCK_DGRAM)
+SEVERENTITY=2
 
 #Here values for testing on sever from prof 
 #serverName = '34.67.93.93'
@@ -75,8 +76,9 @@ def verPacketA():
     return valid,data_length,pcode,entity,data,clientAddress
  
         
-def makePacketA(pcode,entity):
+def makePacketA(pcode):
     # Making values in the packet
+    entity=SEVERENTITY
     repeat = random.randint(5, 20)
     udp_port = random.randint(20000, 30000)
     length = int_to_short(random.randint(50, 100))
@@ -92,10 +94,14 @@ def makePacketA(pcode,entity):
 
 #Methods for part B
 
-def makeAckPacket(data_length,pcode,entity,repeat):
-    packetId=random.randint(0, repeat-1)
+def makeAckPacket(codeA,ID):
+    pcode=codeA
+    packetID=ID
+    #data is ID which is an integer from 0 to random 
+    data_length=struct.calcsize("!I")
+    data=struct.pack("!I",packetID)
+    entity=SEVERENTITY
     header=struct.pack('IHH',data_length,pcode,entity)
-    data=struct.pack("!I",packetId)
     packet=header+data
     return packet
 
@@ -123,47 +129,61 @@ def main():
             # validation = validatePacket(header, data, phase, 0, 0, 0) # len and char aren't used yet, so 0 is used as placeholders
             # if validation != 0: # return code is 0 if valid, otherwise invalid, terminate connection
             # 	break
-            packet,udp_port,repeat,codeA=makePacketA(pcode,entity)
+            packet,udp_port,repeat,codeA=makePacketA(pcode)
             serverSocket.sendto(packet, clientAddress)
-            print("Send Packet")
+            #print("Send Packet")
             phase='B'
+            #current ID for phase B 
+            currentID=0
         except timeout:
-            print("No packets received during timeout period. Connection now closed.")
+            print("Client closing due to timeout, didn't recieve any packets.")
             break
-#     while phase=='B':
-#         #Phase B
-#         clientPacket, clientAddress = serverSocket.recvfrom(1024)
-#         header,data=getHeaderData(clientPacket)
-#         data_length,pcode,entity=struct.unpack("IHH",header)
-#         packetId,data=struct.unpack("HI",data)
-#         #verfies ;en of packet is correct 
-#         valid=True
-#         if(len(packet) != struct.calcsize(format) ):
-#             print("Error: Packet length is not correct")
-#             valid=False
-# #           #verifies that the packet_id field is correct
-#         elif (packetId<0 or packetId>repeat-1):
-#             print("Packet id is incorrect")
-#             valid=False
-#         #ensure packets arrive in the correct order ???
-#         elif (data_length!=len(data)+len(packetId) or pcode !=codeA or entity != 2 or (data!=0 and len(data)%4!=0) ):
-#             print("Packet is not in the right order")
-#             valid=False
-#         #passes all testing, send ack package 
-#         if valid:
-#             awkPacket=makeAckPacket(data_length,pcode,entity,repeat)
-#             recieived=False 
-#             while recieived==False:
-#                 socket.settimeout(5)
-#                 acked_packet_id, clientAddress = serverSocket.recvfrom(1024)
-#                 if(acked_packet_id!=packetId):
-#                     serverSocket.sendto(awkPacket, clientAddress)
-#                 else:
-#                     recieived=True
-#             #makes actual packet now that awk package was send 
-#             packet=makePacketB(data_length,pcode,entity)
-#             serverSocket.sendto(awkPacket, clientAddress)
-#     # Close the server socket (this part may need improvements for graceful termination)
+    while(phase=='B'):
+        try:
+            print("Waiting for client Phase B repeat packaets")
+            packet, clientAddress = serverSocket.recvfrom(1024)
+            header, data = getHeaderData(packet)
+            # #verify packet is correct
+            # validation = validatePacket(header, data, phase, length, 0, codeA) # len and char aren't used yet, so 0 is used as placeholders
+            # if validation != 0: # return code is 0 if valid, otherwise invalid, terminate connection
+            # 	break
+            data_length, pcode, entity = struct.unpack("!IHH", header)
+            ID,data=struct.unpack(f"!4s{data_length-4}s",data) #-4 as ID is being taken out 
+            #convert ID that was in bytes to int 
+            ID=int.from_bytes(ID,'big')  #converting ID back to int from bytes 
+            #bad ID 
+            print(f"Received packet {ID} from client")
+            if ID < 0 or ID >= repeat: #if repeat is 3, ID should be 0,1,2 so 3 would be wrong 
+                print(f"Invalid packet_id. Packet id is {ID}, when the range is from 0 to {repeat-1}. Exiting and closing client connection.")
+                break
+            #makes sure correct IDs are in recieved in order from 0 to random-1
+            if ID == currentID: #correct
+                #
+                print(f"Correct packet recieved (Packet ID: {ID}), sending ackowledge packet to client")
+                codeA=pcode
+                acked_packet=makeAckPacket(codeA,ID)
+                serverSocket.sendto(acked_packet, clientAddress)
+                currentID+=1
+                print(f"Awknowedge packet {ID} has been send to client ")
+            else: #packet recieved in the wrong order, client needs to send again 
+                print(f"Valid packet_id, but recieved in the wrong order. Packet id is {ID}, when expected is {currentID}. Rejected packet and waiting for correct one.")
+            if ID == repeat: #all packets for repeat has been send and verfied, countinue 
+                #makes packet for phase B 
+                packet,codeB,tcp_connection=makePacketB(codeA)
+                #sends to client 
+                serverSocket.sendto(packet, clientAddress) # send TCP port to client in phase b-2 packet
+                #make Phase C TCP SOCKET connection
+                severTCPSocket= socket(AF_INET, SOCK_STREAM)
+                severTCPSocket.bind(("", serverPort))
+                # Listen to at most 1 connection at a time
+                serverSocket.listen(5) #from TCP example file 
+                print ('The TCP server is ready to receive')
+                phase = "C"
+                break
+              
+        except timeout:
+            print("Client closing due to timeout, didn't recieve any packets.")
+            break
     serverSocket.close()
 if __name__ == "__main__":
     main()
