@@ -6,7 +6,7 @@ import random  # for random integer
 #assign server name 
 HEADER_LENGTH=8
 ENTITY_CLIENT=1
-TIMEOUT=10 #how long client waits for packet from server 
+TIMEOUT=5 #how long client waits for packet from server 
 #serverName = '34.67.93.93' # for proof server
 serverName='localhost'
 # Assign a port number
@@ -67,9 +67,9 @@ def stageA():
         print("Packet making in client phase A does not have size divisble by 4. Closing connecction.")
         print("----------- End Stage A -----------")
         clientSocket.close()
-    #     sys.exit()
+        sys.exit()
     # Sending packet to server 
-    print("Sending packet to server")
+    #print("Sending packet to server")
     clientSocket.sendto(packet, (serverName, serverPort))
     # Getting packet from server 
     #gives server time to send packet 
@@ -81,7 +81,7 @@ def stageA():
         print("----------- End Stage A -----------")
         clientSocket.close()
         sys.exit()
-    print("Server send packet")
+    #print("Server send packet")
     #getting data from header and data section of packet 
     header,data=getHeaderData(serverPacket)
     repeat, udp_port, length, codeA =  struct.unpack("!IIHH",data)
@@ -121,29 +121,38 @@ def makePacketB(repeat,length,codeA):
 
 def stageB(repeat,length,codeA):
     # print("----------- Starting Stage B -----------")
-    packet=makePacketB(repeat,length,codeA)
-    clientSocket.sendto(packet, (serverName, serverPort))
-    recieived=False 
-    while recieived==False:
-        socket.settimeout(5)
-        acked_packet, serverAddress = clientSocket.recvfrom(2024)
-        p_code,entity,acked_packet_id=struct.unpack('ihhi', acked_packet)
-        #if no packet was received, send packet again 
-        if(acked_packet_id==0):
-            clientSocket.sendto(packet, serverAddress)
-        else:
-            recieived=True
-            clientSocket.sendto(acked_packet_id, serverAddress)
-    #get packet from server 
-    serverPacket, serverAddress = clientSocket.recvfrom(2024)
-    print("Server send packet")
-    #getting data from header and data section of packet 
-    header,data=getHeaderData(serverPacket)
-    data_length, pcode, entity = decodeHeader(header)
-    tcp_port,codeB =  struct.unpack("!II",data)
-    print(f"Received packet from the server: data_len: {data_length} pcode: {pcode} entity: {entity} tcp_port: {tcp_port} codeB: {codeB} ")
-    print("----------- End Stage B -----------")
-    return tcp_port
+    #The clientshould use a retransmission interval of at least 5 seconds.
+    clientSocket.settimeout(TIMEOUT) 
+    ackedPacketArray = [] #stores successful packets 
+    len_successfulPackets=0
+    #sends repeat amount of packages 
+    while(repeat>len_successfulPackets):
+        try:
+            packet=makePacketB(repeat,length,codeA)
+            clientSocket.sendto(packet, (serverName, serverPort))
+            acked_packet, serverAddress = clientSocket.recvfrom(2024)
+            print(f"{len_successfulPackets} packets has been acknowledged")
+            header,data=getHeaderData(acked_packet)
+            acked_packet_id=struct.unpack('!I',data)
+            print(f"Acknowledged packet ID: {acked_packet_id}. Repeat packet ID: {len_successfulPackets}")
+            #increment by 1 and put into array 
+            len_successfulPackets+=-1
+            ackedPacketArray.append(acked_packet)
+        #an unsuccessful try was done
+        except timeout:
+            print(f"Acknowledgement packet #{len_successfulPackets} was not send to client. Trying again")
+        #due to while loop, tries again until gone through 0-random packets 
+    #get packet from server once gone through all repeats and all has been valid 
+    if len(acked_packet) == repeat:
+        #get packet from server 
+        serverPacket, serverAddress = clientSocket.recvfrom(2024)
+        #getting data from header and data section of packet 
+        header,data=getHeaderData(serverPacket)
+        data_length, pcode, entity = decodeHeader(header)
+        tcp_port,codeB =  struct.unpack("!II",data)
+        print(f"Received packet from the server: data_len: {data_length} pcode: {pcode} entity: {entity} tcp_port: {tcp_port} codeB: {codeB} ")
+        print("----------- End Stage B -----------")
+        return tcp_port
 
 #Functions for Part C
 
