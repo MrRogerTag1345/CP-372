@@ -41,18 +41,18 @@ def validPacket(header, data, length, phaseCode, char, phase):
 	elif phase == "B":
 		# Data portion has all 0's ? 
 		# Length of data is data_length + 4 (packed_id) ?
+		if data_length < length:
+			print(f"Current size of data: {data_length}, However must be greater or equel to {(4 + length)}.")
+			return 0
 		if not isinstance(data, bytes): # Check data type
 			print("Data can only be type byte for phase B.")
 			return 0
 		# Check if bytes are zero or null that isn't part of packet_id (only in data portion)
 		for i in range(4, data_length):
             #dataString = data.decode()
-			if data[i] != 0 or data[i] != "\00":
+			if data[i] != 48 and data[i] != 0: #ascii value of 0 is 48
 				print(f"Value at {i} index: {data[i]}\nBytes must all be zero in the data.")
 				return 0
-		if data_length < 4 + length:
-			print(f"Current size of data: {data_length}, However must be greater or equel to {(4 + length)}.")
-			return 0
 	elif phase == "D":
 		actual_data = data.decode("utf-8")#turns back into string for decoding 
 		# Check to see if the data has the specified character
@@ -69,21 +69,20 @@ def validPacket(header, data, length, phaseCode, char, phase):
 	if entity != 1:
 		print("Entity from client must be 1")
 		return 0
-	if  phase == "B" or phase == "D" or phase == "A" and pcode != phaseCode:
+	if  (phase == "B" or phase == "D" or phase == "A") and pcode != phaseCode:
 		print(f"Pcode should be {phaseCode} for but got {pcode} in phase {phase}")
 		return 0
-
 	# Error 4. check if header was made and assign proper spacing 
 	headerValues = [data_length,pcode,entity]
-	for header in headerValues:
+	for h in headerValues:
         #header into bit length 
-		numBytes = (header.bit_length() + BYTE) // 8
+		numBytes = (h.bit_length() + BYTE) // 8
 		# Convert to bytes 
-		numBytes= len(header.to_bytes(numBytes, "big"))
+		numBytes= len(h.to_bytes(numBytes, "big"))
        #usigned short, check if it was made properly (numBytes should be 2)
-		if header!=data_length: #checking pcode and 
+		if h!=data_length: #checking pcode and 
 			if numBytes > 2:
-				if header==entity:
+				if h==entity:
 					print(f"entity should be size 2 as an unsign short, but was size {numBytes}")
 				else:
 					print(f"pcode should be size 2 as an unsign integer, but was size {numBytes}")
@@ -230,17 +229,17 @@ def createPacketD(codeC):
 def main():
     phase='A'
     while phase=='A':
-        serverSocket.settimeout(TIMEOUT) 
         try:
             print("Waiting for client Phase A packet.")
             packet, clientAddress = serverSocket.recvfrom(1024)
             header, data = getHeaderData(packet)
             data_length, pcode, entity = decodeHeader(header)
-            # #verify packet is correct
-            # validation = validPacket(header, data,data_length, 0, 0, phase) 
-            # if validation ==0: # return code is 0 if valid, otherwise invalid, terminate connection
-            #     print("Bad validation for phase A, ending connection")
-            #     break
+            #verify packet is correct
+            #header,data,data_length,code,char,phase
+            validation = validPacket(header, data,data_length, 0, 0, phase) 
+            if validation ==0: # return code is 0 if valid, otherwise invalid, terminate connection
+                print("Bad validation for phase A, ending connection")
+                break
             packet,udp_port,repeat,codeA=createPacketA(pcode)
             serverSocket.sendto(packet, clientAddress)
             #print("Send Packet")
@@ -256,6 +255,7 @@ def main():
         except timeout:
             print("Client closing due to timeout, didn't recieve any packets.")
             break
+    serverSocket.settimeout(TIMEOUT) 
     while(phase=='B'):
         try:
             print("Waiting for client Phase B repeat packaets")
@@ -263,10 +263,11 @@ def main():
             header, data = getHeaderData(packet)
             print("Got a packet")
             # #verify packet is correct
-            #validation = validPacket(header, data,data_length, codeA, 0, phase) # len and char aren't used yet, so 0 is used as placeholders
-            # if validation ==0: # return code is 0 if valid, otherwise invalid, terminate connection
-            #     print("Bad validation for phase B, ending connection")
-            #     break
+            #header,data,data_length,code,char,phase
+            validation = validPacket(header, data,data_length, codeA, 0, phase) # len and char aren't used yet, so 0 is used as placeholders
+            if validation ==0: # return code is 0 if valid, otherwise invalid, terminate connection
+                print("Bad validation for phase B, ending connection")
+                break
             data_length, pcode, entity = struct.unpack("!IHH", header)
             ID,data=struct.unpack(f"!4s{data_length-4}s",data) #-4 as ID is being taken out 
             #convert ID that was in bytes to int 
@@ -305,7 +306,7 @@ def main():
         except timeout:
             print("Client closing due to timeout, didn't recieve any packets.")
             break
-    time.sleep(4)
+    time.sleep(3)
     while(phase=='C'):
         try:
             packet,codeC,char,repeat2 = createpacketC(codeB)
@@ -324,9 +325,10 @@ def main():
         try:
             packet=connectionSocket.recv(1024)
             print(f"Received packet {numPackets}")
-            numPackets+=1
+            numPackets+=1 
+            time.sleep(1)
             #if got all the packets from server 
-            if numPackets ==repeat:
+            if numPackets ==repeat2:
                 #extract data 
                 header,data=getHeaderData(packet)
                 data_length,pcode,entity=decodeHeader(header)
@@ -338,6 +340,7 @@ def main():
                 #     print("Bad validation for phase B, ending connection")
                 #     break
                 packet=createPacketD(codeC)
+                time.sleep(1)
                 connectionSocket.send(packet)
                 phase='FINISH'
         except timeout:
@@ -348,7 +351,7 @@ def main():
     print("Closing TCP and UDP sockets")
     if (phase=='B'):
         serverUDPSocket.close()
-    elif(phase =='C' or phase=='D'):
+    elif(phase =='C' or phase=='D'or phase=='FINISH'):
         #only close if they were open 
         serverTCPSocket.close()
         serverUDPSocket.close()
