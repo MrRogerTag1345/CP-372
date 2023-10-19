@@ -106,12 +106,13 @@ def makePacketA():
 
 #Funtions for Part B
 
-def makePacketB(repeat,length,codeA):
+def makePacketB(id,length,codeA):
     # Initlaizing variables 
     pcode=codeA
     entity = ENTITY_CLIENT
-    packetId=repeat
+    packetId=id
     #turn into big endian 
+    #print(packetId)
     packetId=packetId.to_bytes(4,'big')
     data=''.zfill(length)
     #ensuring len of data is divisible by 4
@@ -124,7 +125,7 @@ def makePacketB(repeat,length,codeA):
     return packet
 
 def stageB(repeat,length,codeA):
-    # print("----------- Starting Stage B -----------")
+    print("----------- Starting Stage B -----------")
     #The clientshould use a retransmission interval of at least 5 seconds.
     clientSocket.settimeout(TIMEOUT) 
     ackedPacketArray = [] #stores successful packets 
@@ -138,16 +139,17 @@ def stageB(repeat,length,codeA):
             print(f"{len_successfulPackets} packets has been acknowledged")
             header,data=getHeaderData(acked_packet)
             acked_packet_id=struct.unpack('!I',data)
-            print(f"Acknowledged packet ID: {acked_packet_id}. Repeat packet ID: {len_successfulPackets}")
+            print(f"Acknowledged packet ID: {acked_packet_id}. Current repeat packet ID: {len_successfulPackets}")
             #increment by 1 and put into array 
-            len_successfulPackets+=-1
+            len_successfulPackets+=1
             ackedPacketArray.append(acked_packet)
         #an unsuccessful try was done
         except timeout:
             print(f"Acknowledgement packet #{len_successfulPackets} was not send to client. Trying again")
         #due to while loop, tries again until gone through 0-random packets 
     #get packet from server once gone through all repeats and all has been valid 
-    if len(acked_packet) == repeat:
+    if len(ackedPacketArray) == repeat:
+        print(f"All  {repeat} packets has been ackowledge")
         #get packet from server 
         serverPacket, serverAddress = clientSocket.recvfrom(2024)
         #getting data from header and data section of packet 
