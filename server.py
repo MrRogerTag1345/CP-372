@@ -11,6 +11,7 @@ import random  # for random integer
 #assign server name 
 HEADER_LENGTH=8
 ENTITY_CLIENT=1
+SLEEP=1
 TIMEOUT=5 #how long client waits for packet from server 
 serverName = '34.67.93.93' # for proof server
 #serverName='localhost'
@@ -119,6 +120,7 @@ def makePacketB(id,length,codeA):
     pcode=codeA
     entity = ENTITY_CLIENT
     data=''.zfill(length)
+    #print(data)
     #ensuring len of data is divisible by 4
     data,data_length=increaseDataByte(data)
     data_length=data_length+4 #4 is from packet ID 
@@ -129,6 +131,7 @@ def makePacketB(id,length,codeA):
     #make header and data of packet 
     data=packetId+data
     #print(data)
+    #print(data)
     packet=struct.pack(f'!IHH{data_length}s',data_length,codeA,entity,data)
     return packet
 
@@ -137,11 +140,12 @@ def PhaseB(repeat,length,codeA,udp_port):
     #print(udp_port)
     #print(f"{repeat} {length} {codeA}")
     #The clientshould use a retransmission interval of at least 5 seconds.
-    clientSocket.settimeout(TIMEOUT) 
+
     len_successfulPackets=0
     ackedPacketArray = [] #stores successful packets 
     #sends repeat amount of packages 
     while(repeat>len_successfulPackets):
+        clientSocket.settimeout(TIMEOUT) 
         try:
             packet=makePacketB(len_successfulPackets,length,codeA)
             clientSocket.sendto(packet, (serverName, udp_port))
@@ -182,10 +186,10 @@ def PhaseC(TCPSocket):
     header, data = getHeaderData(serverPacket)
     repeat2,length2,codeC,char = struct.unpack("!IIIc", data)
     data_length,pcode,entity=decodeHeader(header)
-    print(f"Received packet from the server: data_len: {data_length} pcode: {pcode} entity: {entity} repeat2 {repeat2} len2: {length2} codeC: {codeC} char: {char} ")
+    print(f"Received packet from the server: data_len: {data_length} pcode: {pcode} entity: {entity} repeat2: {repeat2} len2: {length2} codeC: {codeC} char: {char} ")
     print("----------- Ending Phase C -----------")
     return codeC,char,length2
-
+#Received packet from the server: data_len: 13 pcode: 88 entity: 2 repeat2 17 len2: 16 codeC: 77 char: b'M' 
 #Functions for Part D
 
 def PhaseD(TCPSocket,codeC,char,length2):
@@ -196,11 +200,12 @@ def PhaseD(TCPSocket,codeC,char,length2):
         print(f"Sending packet #{i}")
         TCPSocket.send(packet)
         #ensure dont sent too quick to reduce error margin
-        time.sleep(0.5)
+        #time 1 seems to be the most consistent to work with server 
+        clientSocket.settimeout(TIMEOUT) 
     print("All packets has been sent")
     serverPacket=TCPSocket.recv(1024)
     header,data=getHeaderData(serverPacket)
-    codeD = struct.unpack("!I", data)
+    codeD = struct.unpack("!I", data)[0]
     data_length,pcode,entity=decodeHeader(header)
     print(f"Received packet from the server: data_len: {data_length} pcode: {pcode} entity: {entity} codeD: {codeD} ")
     print("----------- Ending Phase D -----------")
@@ -209,12 +214,12 @@ def PhaseD(TCPSocket,codeC,char,length2):
 def makePacketD(codeC,char,length2):
     pcode = codeC
     entity=ENTITY_CLIENT
-    data=""
     #extra chars needed to make data divisble by 4
-    extraChars=4-length2%4
+    extraChars=(4-(length2%4))%4
     #characters into byte array * number of characters needed 
     data = bytearray([ord(char)] * (length2 + extraChars))
-    data_length=extraChars+ length2
+    #print(data)
+    data_length=extraChars + length2
     packet=struct.pack(f"!IHH{data_length}s",data_length,pcode,entity,data)
     return packet 
 
@@ -230,6 +235,7 @@ def main():
     clientSocket.close()
     TCPSocket.close()
     print("Exiting program")
+
 if __name__ == "__main__":
     main()
     
