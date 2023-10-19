@@ -105,13 +105,15 @@ def makeAckPacket(codeA,ID):
     packet=header+data
     return packet
 
-def makePacketB(data_length,pcode,entity):
+def makePacketB(pcode):
+    data_length=struct.calcsize("!II")
+    entity=SEVERENTITY
     tcp_port=random.randint(20000, 30000)
     codeB=random.randint(100, 400)
     header=struct.pack('IHH',data_length,pcode,entity)
     data=struct.pack("!II",tcp_port,codeB)
     packet=header+data
-    return packet
+    return packet,codeB,tcp_port
 
 #Methods for part C
 #Methods for part D
@@ -167,7 +169,7 @@ def main():
                 print(f"Awknowedge packet {ID} has been send to client ")
             else: #packet recieved in the wrong order, client needs to send again 
                 print(f"Valid packet_id, but recieved in the wrong order. Packet id is {ID}, when expected is {currentID}. Rejected packet and waiting for correct one.")
-            if ID == repeat: #all packets for repeat has been send and verfied, countinue 
+            if currentID == repeat: #all packets for repeat has been send and verfied, countinue 
                 #makes packet for phase B 
                 packet,codeB,tcp_connection=makePacketB(codeA)
                 #sends to client 
@@ -176,7 +178,7 @@ def main():
                 severTCPSocket= socket(AF_INET, SOCK_STREAM)
                 severTCPSocket.bind(("", serverPort))
                 # Listen to at most 1 connection at a time
-                serverSocket.listen(5) #from TCP example file 
+                severTCPSocket.listen(5) #from TCP example file 
                 print ('The TCP server is ready to receive')
                 phase = "C"
                 break
