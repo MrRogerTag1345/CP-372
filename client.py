@@ -188,20 +188,22 @@ def PhaseC(TCPSocket):
     data_length,pcode,entity=decodeHeader(header)
     print(f"Received packet from the server: data_len: {data_length} pcode: {pcode} entity: {entity} repeat2: {repeat2} len2: {length2} codeC: {codeC} char: {char} ")
     print("----------- Ending Phase C -----------")
-    return codeC,char,length2
+    return codeC,char,repeat2,length2
 #Received packet from the server: data_len: 13 pcode: 88 entity: 2 repeat2 17 len2: 16 codeC: 77 char: b'M' 
 #Functions for Part D
 
-def PhaseD(TCPSocket,codeC,char,length2):
+def PhaseD(TCPSocket,codeC,char,repeat2,length2):
     print("----------- Starting Phase D -----------")
     packet=makePacketD(codeC,char,length2)
-    print(f"Sending {length2} packets throught TCP connection to server range 0 - {length2-1}")
-    for i in range(length2):
+    print(f"Sending {repeat2} packets throught TCP connection to server range 0 - {length2-1}")
+    for i in range(repeat2):
         print(f"Sending packet #{i}")
         TCPSocket.send(packet)
+        time.sleep(SLEEP)
         #ensure dont sent too quick to reduce error margin
         #time 1 seems to be the most consistent to work with server 
     print("All packets has been sent")
+    time.sleep(SLEEP)
     serverPacket=TCPSocket.recv(1024)
     header,data=getHeaderData(serverPacket)
     codeD = struct.unpack("!I", data)[0]
@@ -227,8 +229,8 @@ def main():
     tcp_port=PhaseB(repeat,length,codeA,udp_port)
     TCPSocket = socket(AF_INET, SOCK_STREAM)
     TCPSocket.connect((serverName, tcp_port))
-    codeC,char,length2=PhaseC(TCPSocket)
-    PhaseD(TCPSocket,codeC,char,length2)
+    codeC,char,repeat2,length2=PhaseC(TCPSocket)
+    PhaseD(TCPSocket,codeC,char,repeat2,length2)
     #Close connections when finished 
     print("Tasks done, closing TCP and UDP connections")
     clientSocket.close()
