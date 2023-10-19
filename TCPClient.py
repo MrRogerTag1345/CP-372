@@ -1,20 +1,39 @@
-# Import socket module
-from socket import * 
-import sys # In order to terminate the program
+# Import necessary modules
+from socket import *
+import random
 
-serverName = 'localhost'
+# Define the server's IP address or hostname
+serverName = 'localhost'  # Change this to the server's IP or hostname
+
 # Assign a port number
-serverPort = 12000  #6789 is the og provided 
+tcp_port = 12000  # Change this to the same port as your server
 
-# Bind the socket to server address and server port
+# Create a packet
+data = "Hello World!!!"
+data_length = len(data)
+codeB = 0
+pcode = codeB
+entity = tcp_port
+repeat2 = random.randint(5, 20)
+len2 = random.randint(50, 100)
+CodeC = random.randint(100, 400)
+char = 'B'
+
+# Create a client socket
 clientSocket = socket(AF_INET, SOCK_STREAM)
 
-clientSocket.connect((serverName, serverPort))
+# Connect to the server
+clientSocket.connect((serverName, tcp_port))
 
-sentence = input(' Input lower case sentence: ')
-clientSocket. send(sentence.encode())
+# Get user input
+sentence = input('Input lowercase sentence: ')
+
+# Send the user's input to the server
+clientSocket.send(sentence.encode())
+
+# Receive and print the server's response
 modifiedSentence = clientSocket.recv(1024)
+print('From server:', modifiedSentence.decode())
 
-print('From server: ', modifiedSentence.decode())
+# Close the client socket
 clientSocket.close()
-
