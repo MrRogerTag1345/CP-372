@@ -12,8 +12,8 @@ import random  # for random integer
 HEADER_LENGTH=8
 ENTITY_CLIENT=1
 TIMEOUT=5 #how long client waits for packet from server 
-#serverName = '34.67.93.93' # for proof server
-serverName='localhost'
+serverName = '34.67.93.93' # for proof server
+#serverName='localhost'
 # Assign a port number
 clientPort = 2 #same as in class 
 serverPort = 12000
@@ -49,7 +49,7 @@ def increaseDataByte(data):
     if(dataBitNeeded!=0):
         #while not divisble, add a x00 [null string] to the end 
         #source: https://www.programiz.com/python-programming/methods/built-in/bytearray
-        data =data.encode('utf-8')+bytearray(1*dataBitNeeded)
+        data =data.encode('utf-8')+bytearray(0*dataBitNeeded)
     data_length=len(data)+dataBitNeeded
         #len does not count null empty character (null), can't use len(data)
     #print(f"Length of data is {data_length}")
@@ -75,8 +75,8 @@ def PhaseA():
         print("----------- End Phase A -----------")
         clientSocket.close()
         sys.exit()
-    # Sending packet to server 
-    #print("Sending packet to server")
+   #Sending packet to server 
+    print("Sending packet to server")
     clientSocket.sendto(packet, (serverName, serverPort))
     # Getting packet from server 
     #gives server time to send packet 
@@ -128,13 +128,13 @@ def makePacketB(id,length,codeA):
     packetId=packetId.to_bytes(4,'big')
     #make header and data of packet 
     data=packetId+data
-    print(data)
+    #print(data)
     packet=struct.pack(f'!IHH{data_length}s',data_length,codeA,entity,data)
     return packet
 
 def PhaseB(repeat,length,codeA,udp_port):
     print("----------- Starting Phase B -----------")
-    print(udp_port)
+    #print(udp_port)
     #print(f"{repeat} {length} {codeA}")
     #The clientshould use a retransmission interval of at least 5 seconds.
     clientSocket.settimeout(TIMEOUT) 
@@ -189,19 +189,21 @@ def PhaseC(TCPSocket):
 #Functions for Part D
 
 def PhaseD(TCPSocket,codeC,char,length2):
+    print("----------- Starting Phase D -----------")
     packet=makePacketD(codeC,char,length2)
-    print(f"Sending {length2} packets throught TCP connection to server range 0 - {length2}")
+    print(f"Sending {length2} packets throught TCP connection to server range 0 - {length2-1}")
     for i in range(length2):
         print(f"Sending packet #{i}")
         TCPSocket.send(packet)
         #ensure dont sent too quick to reduce error margin
-        time.sleep(2)
+        time.sleep(0.5)
     print("All packets has been sent")
     serverPacket=TCPSocket.recv(1024)
     header,data=getHeaderData(serverPacket)
     codeD = struct.unpack("!I", data)
     data_length,pcode,entity=decodeHeader(header)
     print(f"Received packet from the server: data_len: {data_length} pcode: {pcode} entity: {entity} codeD: {codeD} ")
+    print("----------- Ending Phase D -----------")
     return
 
 def makePacketD(codeC,char,length2):
@@ -210,8 +212,8 @@ def makePacketD(codeC,char,length2):
     data=""
     #extra chars needed to make data divisble by 4
     extraChars=4-length2%4
-    for _ in range(length2+extraChars):
-        data+=char
+    #characters into byte array * number of characters needed 
+    data = bytearray([ord(char)] * (length2 + extraChars))
     data_length=extraChars+ length2
     packet=struct.pack(f"!IHH{data_length}s",data_length,pcode,entity,data)
     return packet 
