@@ -1,3 +1,7 @@
+#Andy Vuong 210868730
+#Chetas Patel
+
+
 # Import socket module
 from socket import * 
 import sys
@@ -14,7 +18,8 @@ serverName='localhost'
 clientPort = 2 #same as in class 
 serverPort = 12000
 clientSocket = socket(AF_INET, SOCK_DGRAM)
-clientSocket.connect((serverName, serverPort))
+#clientSocket.connect((serverName, serverPort)) <- not needed as client
+# socket will swap ports, no need for connection
 
 #Funtions for all
 
@@ -44,9 +49,10 @@ def increaseDataByte(data):
     if(dataBitNeeded!=0):
         #while not divisble, add a x00 [null string] to the end 
         #source: https://www.programiz.com/python-programming/methods/built-in/bytearray
-        data =data.encode('utf-8')+bytearray(0*dataBitNeeded)
+        data =data.encode('utf-8')+bytearray(1*dataBitNeeded)
     data_length=len(data)+dataBitNeeded
         #len does not count null empty character (null), can't use len(data)
+    #print(f"Length of data is {data_length}")
     return data,data_length
 
 def validPacketLen(packet,packetLen):
@@ -87,59 +93,65 @@ def stageA():
     header,data=getHeaderData(serverPacket)
     repeat, udp_port, length, codeA =  struct.unpack("!IIHH",data)
     data_length,pcode,entity =  struct.unpack("!IHH",header)
+
     # Printing contents of packets 
-    print(f"Received packet from the server: data_len: {data_length} pcode: {pcode} entity: {entity} repeat:{repeat} len: {length} udp_port: {udp_port} codeA: {codeA} ")
+    print(f"Received packet from the server: data_len: {data_length} pcode: {pcode} entity: {entity} repeat: {repeat} len: {length} udp_port: {udp_port} codeA: {codeA} ")
     print("----------- End Stage A -----------")
-    return repeat,length,codeA
+    return repeat,length,codeA,udp_port
     
 def makePacketA():
     # Make the packet contents 
     data,data_length=increaseDataByte("Hello World!!!")
     pcode = 0
     entity = ENTITY_CLIENT
-    header=struct.pack('!IHH',data_length, pcode, entity)
+    packet=struct.pack(f'!IHH{data_length}s',data_length, pcode, entity,data)
     #data already made in increaseDataByte 
     # Making the packet , string must be in bytes so encoded
-    packet = header+data
     packetSize=data_length+HEADER_LENGTH
+    #print(f"Packet size is: {packetSize}")
     return packet,packetSize
 
 #Funtions for Part B
+
 
 def makePacketB(id,length,codeA):
     # Initlaizing variables 
     pcode=codeA
     entity = ENTITY_CLIENT
     packetId=id
-    #turn into big endian 
     #print(packetId)
+    #turn into big endian (bytes )
     packetId=packetId.to_bytes(4,'big')
     data=''.zfill(length)
     #ensuring len of data is divisible by 4
     data,data_length=increaseDataByte(data)
     data_length=data_length+4 #4 is from packet ID 
     #make header and data of packet 
-    header=struct.pack('!IHH',data_length,codeA,entity)
-    data=struct.pack(f'!{data_length}s',packetId+data)
-    packet=header+data
+    data=packetId+data
+    print(data)
+    packet=struct.pack(f'!IHH{data_length}s',data_length,codeA,entity,data)
     return packet
 
-def stageB(repeat,length,codeA):
+def stageB(repeat,length,codeA,udp_port):
     print("----------- Starting Stage B -----------")
+    print(udp_port)
+    #print(f"{repeat} {length} {codeA}")
     #The clientshould use a retransmission interval of at least 5 seconds.
     clientSocket.settimeout(TIMEOUT) 
-    ackedPacketArray = [] #stores successful packets 
     len_successfulPackets=0
+    ackedPacketArray = [] #stores successful packets 
     #sends repeat amount of packages 
     while(repeat>len_successfulPackets):
         try:
             packet=makePacketB(len_successfulPackets,length,codeA)
-            clientSocket.sendto(packet, (serverName, serverPort))
+            clientSocket.sendto(packet, (serverName, udp_port))
+            print(f"Sending package {len_successfulPackets}")
             acked_packet, serverAddress = clientSocket.recvfrom(2024)
             print(f"{len_successfulPackets} packets has been acknowledged")
             header,data=getHeaderData(acked_packet)
-            acked_packet_id=struct.unpack('!I',data)
-            print(f"Acknowledged packet ID: {acked_packet_id}. Current repeat packet ID: {len_successfulPackets}")
+            #print(f"{header} {data}")
+            ack_id=struct.unpack('!I',data)[0] #only need the first thing in data, ignore the rest
+            print(f"Acknowledged packet ID: {ack_id}. Current repeat packet ID: {len_successfulPackets}")
             #increment by 1 and put into array 
             len_successfulPackets+=1
             ackedPacketArray.append(acked_packet)
@@ -168,8 +180,8 @@ def stageC():
 #Functions for Part D
 
 def main():
-    repeat,length,codeA=stageA()
-    tcp_port=stageB(repeat,length,codeA)
+    repeat,length,codeA,udp_port=stageA()
+    tcp_port=stageB(repeat,length,codeA,udp_port)
     stageC(tcp_port)
     clientSocket.close()
 
