@@ -335,12 +335,11 @@ def main():
                 header,data=getHeaderData(packet)
                 data_length,pcode,entity=decodeHeader(header)
                 codeC=pcode
-                
-                #valdiate the data 
-                # validation = validPacket(header, data,data_length, codeC, char, phase) 
-                # if validation ==0: # return code is 0 if valid, otherwise invalid, terminate connection
-                #     print("Bad validation for phase B, ending connection")
-                #     break
+               # valdiate the data 
+                validation = validPacket(header, data,data_length, codeC, char, phase) 
+                if validation ==0: # return code is 0 if valid, otherwise invalid, terminate connection
+                    print("Bad validation for phase B, ending connection")
+                    break
                 packet=createPacketD(codeC)
                 time.sleep(1)
                 connectionSocket.send(packet)
@@ -350,7 +349,7 @@ def main():
             break
     if(phase=='FINISH'):
         print("server has finish all phases")
-    print("Closing TCP and UDP sockets")
+    print("Closing TCP and UDP sockets\n-------------DONE------------")
     if (phase=='B'):
         serverUDPSocket.close()
     elif(phase =='C' or phase=='D'or phase=='FINISH'):
