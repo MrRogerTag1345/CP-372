@@ -13,8 +13,8 @@ HEADER_LENGTH=8
 ENTITY_CLIENT=1
 SLEEP=1
 TIMEOUT=5 #how long client waits for packet from server 
-#serverName = '34.67.93.93' # for proof server
-serverName='localhost'
+serverName = '34.67.93.93' # for proof server
+#serverName='localhost'
 # Assign a port number
 clientPort = 2 #same as in class 
 serverPort = 12000
